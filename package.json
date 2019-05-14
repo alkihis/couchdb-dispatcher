@@ -1,6 +1,6 @@
 {
   "name": "couchdb-dispatcher",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "build/dispatcher.js",
   "scripts": {
@@ -17,5 +17,5 @@
     "node-fetch": "^2.5.0",
     "winston": "^3.2.1"
   },
-  "dependencies": { }
+  "dependencies": {}
 }
