@@ -1,13 +1,17 @@
+import * as express from 'express';
+import { Request, Response } from 'express-serve-static-core';
+
 /**
  * Endpoint accepter: Function that accept an ID / Key and produce a true / false value if key should be accepted or not.
  * If Function produce a non-empty string, given string will be used as key (useful for trimming an prefix / suffix)
  */
 export type EndpointAccepter = (key: string) => boolean | string;
 export type EndpointAccepters = { [endpoint: string]: EndpointAccepter };
+export type DatabaseResponse = {id: string, [databaseKeys: string]: any}[];
 type Queues = { [endpoint: string]: Queue };
 
-if (!window || !window.fetch) {
-    var fetch = require('node-fetch');
+if (typeof window === "undefined" || !window.fetch) {
+    var fetch = require('node-fetch') as GlobalFetch["fetch"];
 }
 
 /**
@@ -90,7 +94,7 @@ export default class Dispatcher {
      * @returns
      * @memberof Dispatcher
      */
-    public async pFlush(id: number) {
+    public async pFlush(id: number) : Promise<DatabaseResponse> {
         return this.flattenList(await Promise.all(Object.values(this.pool).map(q => q.flush(id))));
     }
 
@@ -252,5 +256,69 @@ class Queue {
 
         return Promise.all(packets_promises)
             .then(data => [].concat(...data));
+    }
+}
+
+export class Routes {
+    protected app = express();
+    protected dispatcher: Dispatcher;
+
+    constructor(
+        accepters?: EndpointAccepters,
+        database_url = "http://localhost:5984",
+        json_limit = 50
+    ) {
+        this.app.use(express.json({ limit: json_limit * 1024 * 1024 }));
+        this.dispatcher = new Dispatcher(database_url, accepters);
+    }
+    
+    set(
+        method = "GET",
+        route: string, 
+        callback_keys: (req: Request, res: Response, variable_container: any) => string[] | void, 
+        callback_data: (req: Request, res: Response, data: DatabaseResponse, variable_container: any) => void, 
+        callback_error?: (req: Request, res: Response, error: any, variable_container: any) => void
+    ) {
+        const express_callback = (req: Request, res: Response) => {
+            const container = {};
+
+            const keys = callback_keys(req, res, container);
+
+            if (keys) {
+                const id = this.dispatcher.load(keys);
+                this.dispatcher.pFlush(id)
+                    .then(data => {
+                        callback_data(req, res, data, container);
+                    })
+                    .catch(error => {
+                        if (callback_error)
+                            callback_error(req, res, error, container);
+                    })
+            }
+        };
+
+        if (method === 'GET') {
+            this.app.get(route, express_callback);
+        }
+        else if (method === "POST") {
+            this.app.post(route, express_callback);
+        }
+        else if (method === "PUT") {
+            this.app.put(route, express_callback);
+        }
+        else if (method === "DELETE") {
+            this.app.delete(route, express_callback);
+        }
+        else {
+            throw new Error("Unsupported method");
+        }
+    }
+
+    listen(port = 3030, callback?: Function) {
+        this.app.listen(port, callback);
+    }
+
+    setEndpoint(endpoint: string, fn: EndpointAccepter) {
+        this.dispatcher.set(endpoint, fn);
     }
 }

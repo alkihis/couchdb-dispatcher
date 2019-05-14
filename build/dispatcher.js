@@ -8,7 +8,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-if (!window || !window.fetch) {
+const express = require("express");
+if (typeof window === "undefined" || !window.fetch) {
     var fetch = require('node-fetch');
 }
 /**
@@ -216,3 +217,49 @@ class Queue {
         });
     }
 }
+class Routes {
+    constructor(accepters, database_url = "http://localhost:5984", json_limit = 50) {
+        this.app = express();
+        this.app.use(express.json({ limit: json_limit * 1024 * 1024 }));
+        this.dispatcher = new Dispatcher(database_url, accepters);
+    }
+    set(method = "GET", route, callback_keys, callback_data, callback_error) {
+        const express_callback = (req, res) => {
+            const container = {};
+            const keys = callback_keys(req, res, container);
+            if (keys) {
+                const id = this.dispatcher.load(keys);
+                this.dispatcher.pFlush(id)
+                    .then(data => {
+                    callback_data(req, res, data, container);
+                })
+                    .catch(error => {
+                    if (callback_error)
+                        callback_error(req, res, error, container);
+                });
+            }
+        };
+        if (method === 'GET') {
+            this.app.get(route, express_callback);
+        }
+        else if (method === "POST") {
+            this.app.post(route, express_callback);
+        }
+        else if (method === "PUT") {
+            this.app.put(route, express_callback);
+        }
+        else if (method === "DELETE") {
+            this.app.delete(route, express_callback);
+        }
+        else {
+            throw new Error("Unsupported method");
+        }
+    }
+    listen(port = 3030, callback) {
+        this.app.listen(port, callback);
+    }
+    setEndpoint(endpoint, fn) {
+        this.dispatcher.set(endpoint, fn);
+    }
+}
+exports.Routes = Routes;

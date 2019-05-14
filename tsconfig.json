@@ -22,10 +22,7 @@
       "target": "ES6"
   },
   "files": [ // path to the files to compile
-      "./ts/src/index.ts",
-      "./ts/src/logger.ts",
-      "./ts/src/ghost.ts",
-      "./ts/src/test.ts"
+      "./ts/src/dispatcher.ts"
   ],
   "exclude" : [  
    // "../taskobject"
