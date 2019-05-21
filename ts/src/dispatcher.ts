@@ -7,7 +7,7 @@ import { Request, Response } from 'express-serve-static-core';
  */
 export type EndpointAccepter = (key: string) => boolean | string;
 export type EndpointAccepters = { [endpoint: string]: EndpointAccepter };
-export type DatabaseResponse = {id: string, [databaseKeys: string]: any}[];
+export type DatabaseResponse = { [id: string]: {[databaseKeys: string]: any} };
 type Queues = { [endpoint: string]: Queue };
 
 if (typeof window === "undefined" || !window.fetch) {

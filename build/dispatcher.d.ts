@@ -8,9 +8,10 @@ export declare type EndpointAccepters = {
     [endpoint: string]: EndpointAccepter;
 };
 export declare type DatabaseResponse = {
-    id: string;
-    [databaseKeys: string]: any;
-}[];
+    [id: string]: {
+        [databaseKeys: string]: any;
+    };
+};
 declare type Queues = {
     [endpoint: string]: Queue;
 };
