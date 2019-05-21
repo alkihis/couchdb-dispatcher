@@ -41,12 +41,18 @@ class Dispatcher {
      * @returns {number} Numeric ID to flush with
      * @memberof Dispatcher
      */
-    load(ids) {
+    load(ids, custom) {
         let c = 0;
         let ok;
         const uniq_id = Math.random();
         for (const k of ids) {
             ok = false;
+            if (custom && custom in this.pool) {
+                if (this.pool[custom].push(k, uniq_id)) {
+                    c++;
+                }
+                continue;
+            }
             for (const q of Object.values(this.pool)) {
                 ok = q.push(k, uniq_id);
                 if (ok) {
@@ -223,12 +229,12 @@ class Routes {
         this.app.use(express.json({ limit: json_limit * 1024 * 1024 }));
         this.dispatcher = new Dispatcher(database_url, accepters);
     }
-    set(method = "GET", route, callback_keys, callback_data, callback_error) {
+    set(method = "GET", route, callback_keys, callback_data, callback_error, force_endpoint) {
         const express_callback = (req, res) => {
             const container = {};
             const keys = callback_keys(req, res, container);
             if (keys) {
-                const id = this.dispatcher.load(keys);
+                const id = this.dispatcher.load(keys, force_endpoint);
                 this.dispatcher.pFlush(id)
                     .then(data => {
                     callback_data(req, res, data, container);

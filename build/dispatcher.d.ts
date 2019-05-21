@@ -39,7 +39,7 @@ export default class Dispatcher {
      * @returns {number} Numeric ID to flush with
      * @memberof Dispatcher
      */
-    load(ids: string[]): number;
+    load(ids: string[], custom?: string): number;
     /**
      * Flush all queues.
      *
@@ -82,7 +82,7 @@ export declare class Routes {
     protected app: import("express-serve-static-core").Express;
     protected dispatcher: Dispatcher;
     constructor(accepters?: EndpointAccepters, database_url?: string, json_limit?: number);
-    set(method: string, route: string, callback_keys: (req: Request, res: Response, variable_container: any) => string[] | void, callback_data: (req: Request, res: Response, data: DatabaseResponse, variable_container: any) => void, callback_error?: (req: Request, res: Response, error: any, variable_container: any) => void): void;
+    set(method: string, route: string, callback_keys: (req: Request, res: Response, variable_container: any) => string[] | void, callback_data: (req: Request, res: Response, data: DatabaseResponse, variable_container: any) => void, callback_error?: (req: Request, res: Response, error: any, variable_container: any) => void, force_endpoint?: string): void;
     listen(port?: number, callback?: Function): void;
     setEndpoint(endpoint: string, fn: EndpointAccepter): void;
 }

@@ -48,7 +48,7 @@ export default class Dispatcher {
      * @returns {number} Numeric ID to flush with
      * @memberof Dispatcher
      */
-    public load(ids: string[]) : number {
+    public load(ids: string[], custom?: string) : number {
         let c = 0;
         let ok: boolean;
 
@@ -56,6 +56,13 @@ export default class Dispatcher {
 
         for (const k of ids) {
             ok = false;
+            if (custom && custom in this.pool) {
+                if (this.pool[custom].push(k, uniq_id)) {
+                    c++;
+                }
+                continue;
+            }
+
             for (const q of Object.values(this.pool)) {
                 ok = q.push(k, uniq_id);
 
@@ -277,7 +284,8 @@ export class Routes {
         route: string, 
         callback_keys: (req: Request, res: Response, variable_container: any) => string[] | void, 
         callback_data: (req: Request, res: Response, data: DatabaseResponse, variable_container: any) => void, 
-        callback_error?: (req: Request, res: Response, error: any, variable_container: any) => void
+        callback_error?: (req: Request, res: Response, error: any, variable_container: any) => void,
+        force_endpoint?: string
     ) {
         const express_callback = (req: Request, res: Response) => {
             const container = {};
@@ -285,7 +293,7 @@ export class Routes {
             const keys = callback_keys(req, res, container);
 
             if (keys) {
-                const id = this.dispatcher.load(keys);
+                const id = this.dispatcher.load(keys, force_endpoint);
                 this.dispatcher.pFlush(id)
                     .then(data => {
                         callback_data(req, res, data, container);
