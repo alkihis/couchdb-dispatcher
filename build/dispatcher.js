@@ -28,6 +28,7 @@ class Dispatcher {
      */
     constructor(database_link, accept_functions = {}, packet_size = 64) {
         this.pool = {};
+        this.private_pool = {};
         this.url = database_link;
         this.packet_size_per_queue = packet_size;
         for (const [endpoint, func] of Object.entries(accept_functions)) {
@@ -47,13 +48,16 @@ class Dispatcher {
         const uniq_id = Math.random();
         for (const k of ids) {
             ok = false;
-            if (custom && custom in this.pool) {
+            if (custom) {
+                if (!(custom in this.pool)) {
+                    this.set(custom, () => true, undefined, true);
+                }
                 if (this.pool[custom].push(k, uniq_id)) {
                     c++;
                 }
                 continue;
             }
-            for (const q of Object.values(this.pool)) {
+            for (const q of Object.values(this.pool).filter(p => !p.hidden)) {
                 ok = q.push(k, uniq_id);
                 if (ok) {
                     c++;
@@ -124,17 +128,19 @@ class Dispatcher {
             console.warn('Corresponding endpoint queue not found');
         }
     }
-    set(endpoint, accept_function, packet_size = this.packet_size_per_queue) {
+    set(endpoint, accept_function, packet_size = this.packet_size_per_queue, hidden = false) {
         if (endpoint in this.pool) {
             // Mise à jour de l'ancienne Queue
             if (accept_function)
                 this.pool[endpoint].accept_fn = accept_function;
             if (packet_size > 0)
                 this.pool[endpoint].packet_size = packet_size;
+            this.pool[endpoint].hidden = hidden;
         }
         else {
             // Nouvelle Queue
             this.pool[endpoint] = new Queue(this.url + "/" + endpoint, accept_function, packet_size);
+            this.pool[endpoint].hidden = hidden;
         }
     }
 }
@@ -143,6 +149,7 @@ class Queue {
     constructor(endpoint, accept_function, max_packet = 64) {
         this.pool = [];
         this.pool_by_id = {};
+        this.hidden = false;
         this.endpoint = endpoint;
         this.max_packet = max_packet;
         this.accept_fn = accept_function;

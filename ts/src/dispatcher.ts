@@ -23,6 +23,7 @@ if (typeof window === "undefined" || !window.fetch) {
 export default class Dispatcher {
     protected url: string;
     protected pool: Queues = {};
+    protected private_pool: Queues = {};
     protected packet_size_per_queue: number;
 
     /**
@@ -56,14 +57,18 @@ export default class Dispatcher {
 
         for (const k of ids) {
             ok = false;
-            if (custom && custom in this.pool) {
+            if (custom) {
+                if (!(custom in this.pool)) {
+                    this.set(custom, () => true, undefined, true);
+                }
+
                 if (this.pool[custom].push(k, uniq_id)) {
                     c++;
                 }
                 continue;
             }
 
-            for (const q of Object.values(this.pool)) {
+            for (const q of Object.values(this.pool).filter(p => !p.hidden)) {
                 ok = q.push(k, uniq_id);
 
                 if (ok) {
@@ -146,17 +151,20 @@ export default class Dispatcher {
         }
     }
 
-    public set(endpoint: string, accept_function: EndpointAccepter, packet_size = this.packet_size_per_queue) {
+    public set(endpoint: string, accept_function: EndpointAccepter, packet_size = this.packet_size_per_queue, hidden = false) {
         if (endpoint in this.pool) {
             // Mise à jour de l'ancienne Queue
             if (accept_function)
                 this.pool[endpoint].accept_fn = accept_function;
             if (packet_size > 0)
                 this.pool[endpoint].packet_size = packet_size;
+
+            this.pool[endpoint].hidden = hidden;
         }
         else {
             // Nouvelle Queue
             this.pool[endpoint] = new Queue(this.url + "/" + endpoint, accept_function, packet_size);
+            this.pool[endpoint].hidden = hidden;
         }
     }
 }
@@ -165,6 +173,7 @@ class Queue {
     protected pool: string[] = [];
     protected pool_by_id: { [poolId: string]: string[] } = {};
     protected endpoint: string;
+    public hidden = false;
     protected max_packet: number;
     public accept_fn: EndpointAccepter;
 

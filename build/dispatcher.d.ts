@@ -24,6 +24,7 @@ declare type Queues = {
 export default class Dispatcher {
     protected url: string;
     protected pool: Queues;
+    protected private_pool: Queues;
     protected packet_size_per_queue: number;
     /**
      * Creates an instance of Dispatcher.
@@ -57,7 +58,7 @@ export default class Dispatcher {
     pFlush(id: number): Promise<DatabaseResponse>;
     protected flattenList(data: any[][]): Promise<any>;
     remove(endpoint: string): void;
-    set(endpoint: string, accept_function: EndpointAccepter, packet_size?: number): void;
+    set(endpoint: string, accept_function: EndpointAccepter, packet_size?: number, hidden?: boolean): void;
 }
 declare class Queue {
     protected pool: string[];
@@ -65,6 +66,7 @@ declare class Queue {
         [poolId: string]: string[];
     };
     protected endpoint: string;
+    hidden: boolean;
     protected max_packet: number;
     accept_fn: EndpointAccepter;
     constructor(endpoint: string, accept_function: EndpointAccepter, max_packet?: number);
