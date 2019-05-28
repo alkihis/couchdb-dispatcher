@@ -279,13 +279,23 @@ export class Routes {
         this.dispatcher = new Dispatcher(database_url, accepters);
     }
     
+    /**
+     * Set a route
+     *
+     * @param {string} [method="GET"] Accepted method for route
+     * @param {string} route Route URL
+     * @param {((req: Request, res: Response, variable_container: any) => string[] | void)} callback_keys Callback that return keys.
+     * @param {(req: Request, res: Response, data: DatabaseResponse, variable_container: any) => void} callback_data Callback that send data to client
+     * @param {(req: Request, res: Response, error: any, variable_container: any) => void} [callback_error] Callback when encoutering an error (and sending a message to client)
+     * @param {(string | ((req: Request) => string))} [force_endpoint] Specific endpoint/database to fetch: Can be a string or a function that return the desired endpoint for this request
+     */
     set(
         method = "GET",
         route: string, 
         callback_keys: (req: Request, res: Response, variable_container: any) => string[] | void, 
         callback_data: (req: Request, res: Response, data: DatabaseResponse, variable_container: any) => void, 
         callback_error?: (req: Request, res: Response, error: any, variable_container: any) => void,
-        force_endpoint?: string
+        force_endpoint?: string | ((req: Request) => string)
     ) {
         const express_callback = (req: Request, res: Response) => {
             const container = {};
@@ -293,6 +303,10 @@ export class Routes {
             const keys = callback_keys(req, res, container);
 
             if (keys) {
+                if (typeof force_endpoint === 'function') {
+                    force_endpoint = force_endpoint(req);
+                }
+
                 const id = this.dispatcher.load(keys, force_endpoint);
                 this.dispatcher.pFlush(id)
                     .then(data => {

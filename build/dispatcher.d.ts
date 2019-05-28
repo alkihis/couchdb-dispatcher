@@ -83,7 +83,17 @@ export declare class Routes {
     protected app: import("express-serve-static-core").Express;
     protected dispatcher: Dispatcher;
     constructor(accepters?: EndpointAccepters, database_url?: string, json_limit?: number);
-    set(method: string, route: string, callback_keys: (req: Request, res: Response, variable_container: any) => string[] | void, callback_data: (req: Request, res: Response, data: DatabaseResponse, variable_container: any) => void, callback_error?: (req: Request, res: Response, error: any, variable_container: any) => void, force_endpoint?: string): void;
+    /**
+     * Set a route
+     *
+     * @param {string} [method="GET"] Accepted method for route
+     * @param {string} route Route URL
+     * @param {((req: Request, res: Response, variable_container: any) => string[] | void)} callback_keys Callback that return keys.
+     * @param {(req: Request, res: Response, data: DatabaseResponse, variable_container: any) => void} callback_data Callback that send data to client
+     * @param {(req: Request, res: Response, error: any, variable_container: any) => void} [callback_error] Callback when encoutering an error (and sending a message to client)
+     * @param {(string | ((req: Request) => string))} [force_endpoint] Specific endpoint/database to fetch: Can be a string or a function that return the desired endpoint for this request
+     */
+    set(method: string, route: string, callback_keys: (req: Request, res: Response, variable_container: any) => string[] | void, callback_data: (req: Request, res: Response, data: DatabaseResponse, variable_container: any) => void, callback_error?: (req: Request, res: Response, error: any, variable_container: any) => void, force_endpoint?: string | ((req: Request) => string)): void;
     listen(port?: number, callback?: Function): void;
     setEndpoint(endpoint: string, fn: EndpointAccepter): void;
 }
