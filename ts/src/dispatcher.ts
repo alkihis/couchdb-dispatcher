@@ -1,5 +1,4 @@
 import * as express from 'express';
-import { Request, Response } from 'express-serve-static-core';
 
 /**
  * Endpoint accepter: Function that accept an ID / Key and produce a true / false value if key should be accepted or not.
@@ -301,12 +300,12 @@ export class Routes {
     set(
         method = "GET",
         route: string, 
-        callback_keys: (req: Request, res: Response, variable_container: any) => string[] | void, 
-        callback_data: (req: Request, res: Response, data: DatabaseResponse, variable_container: any) => void, 
-        callback_error?: (req: Request, res: Response, error: any, variable_container: any) => void,
-        force_endpoint?: string | ((req: Request) => string)
+        callback_keys: (req: express.Request, res: express.Response, variable_container: any) => string[] | void, 
+        callback_data: (req: express.Request, res: express.Response, data: DatabaseResponse, variable_container: any) => void, 
+        callback_error?: (req: express.Request, res: express.Response, error: any, variable_container: any) => void,
+        force_endpoint?: string | ((req: express.Request) => string)
     ) {
-        const express_callback = (req: Request, res: Response) => {
+        const express_callback = (req: express.Request, res: express.Response) => {
             const container = {};
 
             const keys = callback_keys(req, res, container);

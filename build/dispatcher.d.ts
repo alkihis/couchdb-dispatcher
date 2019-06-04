@@ -1,4 +1,4 @@
-import { Request, Response } from 'express-serve-static-core';
+import * as express from 'express';
 /**
  * Endpoint accepter: Function that accept an ID / Key and produce a true / false value if key should be accepted or not.
  * If Function produce a non-empty string, given string will be used as key (useful for trimming an prefix / suffix)
@@ -95,7 +95,7 @@ export declare class Routes {
      * @param {(req: Request, res: Response, error: any, variable_container: any) => void} [callback_error] Callback when encoutering an error (and sending a message to client)
      * @param {(string | ((req: Request) => string))} [force_endpoint] Specific endpoint/database to fetch: Can be a string or a function that return the desired endpoint for this request
      */
-    set(method: string, route: string, callback_keys: (req: Request, res: Response, variable_container: any) => string[] | void, callback_data: (req: Request, res: Response, data: DatabaseResponse, variable_container: any) => void, callback_error?: (req: Request, res: Response, error: any, variable_container: any) => void, force_endpoint?: string | ((req: Request) => string)): void;
+    set(method: string, route: string, callback_keys: (req: express.Request, res: express.Response, variable_container: any) => string[] | void, callback_data: (req: express.Request, res: express.Response, data: DatabaseResponse, variable_container: any) => void, callback_error?: (req: express.Request, res: express.Response, error: any, variable_container: any) => void, force_endpoint?: string | ((req: express.Request) => string)): void;
     listen(port?: number, callback?: Function): void;
     setEndpoint(endpoint: string, fn: EndpointAccepter): void;
 }
