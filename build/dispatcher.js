@@ -7,8 +7,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-const express = require("express");
+const express_1 = __importDefault(require("express"));
 if (typeof window === "undefined" || !window.fetch) {
     var fetch = require('node-fetch');
 }
@@ -43,7 +46,6 @@ class Dispatcher {
      * @memberof Dispatcher
      */
     load(ids, custom) {
-        let c = 0;
         let ok;
         const uniq_id = Math.random();
         for (const k of ids) {
@@ -52,15 +54,12 @@ class Dispatcher {
                 if (!(custom in this.pool)) {
                     this.set(custom, () => true, undefined, true);
                 }
-                if (this.pool[custom].push(k, uniq_id)) {
-                    c++;
-                }
+                this.pool[custom].push(k, uniq_id);
                 continue;
             }
             for (const q of Object.values(this.pool).filter(p => !p.hidden)) {
                 ok = q.push(k, uniq_id);
                 if (ok) {
-                    c++;
                     break;
                 }
             }
@@ -120,6 +119,10 @@ class Dispatcher {
             return f(yield previous, next);
         }), Promise.resolve({}));
     }
+    /**
+     * Remove an endpoint
+     * @param endpoint
+     */
     remove(endpoint) {
         if (endpoint in this.pool) {
             delete this.pool[endpoint];
@@ -128,6 +131,13 @@ class Dispatcher {
             console.warn('Corresponding endpoint queue not found');
         }
     }
+    /**
+     * Set an endpoint
+     * @param endpoint Name
+     * @param accept_function Accepter function
+     * @param packet_size Number of packets max
+     * @param hidden Hidden endpoint or not
+     */
     set(endpoint, accept_function, packet_size = this.packet_size_per_queue, hidden = false) {
         if (endpoint in this.pool) {
             // Mise à jour de l'ancienne Queue
@@ -232,33 +242,37 @@ class Queue {
 }
 class Routes {
     constructor(accepters, database_url = "http://localhost:5984", json_limit = 50) {
-        this.app = express();
-        this.app.use(express.json({ limit: json_limit * 1024 * 1024 }));
+        this.app = express_1.default();
+        this.app.use(express_1.default.json({ limit: json_limit * 1024 * 1024 }));
         this.dispatcher = new Dispatcher(database_url, accepters);
     }
     /**
      * Set a route
-     *
-     * @param {string} [method="GET"] Accepted method for route
-     * @param {string} route Route URL
-     * @param {((req: Request, res: Response, variable_container: any) => string[] | void)} callback_keys Callback that return keys.
-     * @param {(req: Request, res: Response, data: DatabaseResponse, variable_container: any) => void} callback_data Callback that send data to client
-     * @param {(req: Request, res: Response, error: any, variable_container: any) => void} [callback_error] Callback when encoutering an error (and sending a message to client)
-     * @param {(string | ((req: Request) => string))} [force_endpoint] Specific endpoint/database to fetch: Can be a string or a function that return the desired endpoint for this request
+     * @param options Route options
      */
-    set(method = "GET", route, callback_keys, callback_data, callback_error, force_endpoint) {
+    set(options) {
+        const { endpoint: force_endpoint, method, get_keys: callback_keys, post_data: callback_data, on_error: callback_error, route } = options;
+        // Building function used as express callback
         const express_callback = (req, res) => {
             const container = {};
+            // Gettings keys
             const keys = callback_keys(req, res, container);
+            // If keys returned
             if (keys) {
-                if (typeof force_endpoint === 'function') {
-                    force_endpoint = force_endpoint(req);
+                let endpoint = force_endpoint;
+                // If the collection is a function, get the real collection
+                if (typeof endpoint === 'function') {
+                    endpoint = endpoint(req);
                 }
-                const id = this.dispatcher.load(keys, force_endpoint);
+                // Load all ids into dispatcher for endpoint
+                const id = this.dispatcher.load(keys, endpoint);
+                // Parallel flush
                 this.dispatcher.pFlush(id)
+                    // Final callback, for data
                     .then(data => {
                     callback_data(req, res, data, container);
                 })
+                    // Otherwise, if flush error
                     .catch(error => {
                     if (callback_error)
                         callback_error(req, res, error, container);
