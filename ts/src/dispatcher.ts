@@ -1,4 +1,4 @@
-import * as express from 'express';
+import express from 'express';
 
 /**
  * Endpoint accepter: Function that accept an ID / Key and produce a true / false value if key should be accepted or not.
@@ -49,7 +49,6 @@ export default class Dispatcher {
      * @memberof Dispatcher
      */
     public load(ids: string[], custom?: string) : number {
-        let c = 0;
         let ok: boolean;
 
         const uniq_id = Math.random();
@@ -61,9 +60,7 @@ export default class Dispatcher {
                     this.set(custom, () => true, undefined, true);
                 }
 
-                if (this.pool[custom].push(k, uniq_id)) {
-                    c++;
-                }
+                this.pool[custom].push(k, uniq_id);
                 continue;
             }
 
@@ -71,7 +68,6 @@ export default class Dispatcher {
                 ok = q.push(k, uniq_id);
 
                 if (ok) {
-                    c++;
                     break;
                 }
             }
@@ -141,6 +137,10 @@ export default class Dispatcher {
         }, Promise.resolve({}));
     }
 
+    /**
+     * Remove an endpoint
+     * @param endpoint 
+     */
     public remove(endpoint: string) {
         if (endpoint in this.pool) {
             delete this.pool[endpoint];
@@ -150,6 +150,13 @@ export default class Dispatcher {
         }
     }
 
+    /**
+     * Set an endpoint
+     * @param endpoint Name
+     * @param accept_function Accepter function
+     * @param packet_size Number of packets max
+     * @param hidden Hidden endpoint or not
+     */
     public set(endpoint: string, accept_function: EndpointAccepter, packet_size = this.packet_size_per_queue, hidden = false) {
         if (endpoint in this.pool) {
             // Mise à jour de l'ancienne Queue
@@ -289,37 +296,43 @@ export class Routes {
     
     /**
      * Set a route
-     *
-     * @param {string} [method="GET"] Accepted method for route
-     * @param {string} route Route URL
-     * @param {((req: Request, res: Response, variable_container: any) => string[] | void)} callback_keys Callback that return keys.
-     * @param {(req: Request, res: Response, data: DatabaseResponse, variable_container: any) => void} callback_data Callback that send data to client
-     * @param {(req: Request, res: Response, error: any, variable_container: any) => void} [callback_error] Callback when encoutering an error (and sending a message to client)
-     * @param {(string | ((req: Request) => string))} [force_endpoint] Specific endpoint/database to fetch: Can be a string or a function that return the desired endpoint for this request
+     * @param options Route options
      */
-    set(
-        method = "GET",
-        route: string, 
-        callback_keys: (req: express.Request, res: express.Response, variable_container: any) => string[] | void, 
-        callback_data: (req: express.Request, res: express.Response, data: DatabaseResponse, variable_container: any) => void, 
-        callback_error?: (req: express.Request, res: express.Response, error: any, variable_container: any) => void,
-        force_endpoint?: string | ((req: express.Request) => string)
-    ) {
+    set(options: Route) {
+        const {
+            endpoint: force_endpoint,
+            method,
+            get_keys: callback_keys,
+            post_data: callback_data,
+            on_error: callback_error,
+            route
+        } = options;
+
+        // Building function used as express callback
         const express_callback = (req: express.Request, res: express.Response) => {
             const container = {};
 
+            // Gettings keys
             const keys = callback_keys(req, res, container);
 
+            // If keys returned
             if (keys) {
-                if (typeof force_endpoint === 'function') {
-                    force_endpoint = force_endpoint(req);
+                let endpoint = force_endpoint;
+                // If the collection is a function, get the real collection
+                if (typeof endpoint === 'function') {
+                    endpoint = endpoint(req);
                 }
 
-                const id = this.dispatcher.load(keys, force_endpoint);
+                // Load all ids into dispatcher for endpoint
+                const id = this.dispatcher.load(keys, endpoint);
+
+                // Parallel flush
                 this.dispatcher.pFlush(id)
+                    // Final callback, for data
                     .then(data => {
                         callback_data(req, res, data, container);
                     })
+                    // Otherwise, if flush error
                     .catch(error => {
                         if (callback_error)
                             callback_error(req, res, error, container);
@@ -351,4 +364,30 @@ export class Routes {
     setEndpoint(endpoint: string, fn: EndpointAccepter) {
         this.dispatcher.set(endpoint, fn);
     }
+}
+
+export interface Route {
+    /** HTTP method for route */
+    method: string;
+    /** Route URL */
+    route: string;
+    /** Document used into database. If not used, endpoint will be determined by EndpointAccepters */
+    endpoint?: string | ((req: express.Request) => string);
+    /** 
+     * Key getter.
+     * Called to get keys stored in request data. If void returned, stop the execution of the function.
+     * If void, take care of responding something with res ! 
+     * 
+     * You can store things used between get_keys and post_data within the variable container, who is an object.
+     * Do NOT reassign his reference ! 
+     */
+    get_keys: (req: express.Request, res: express.Response, variable_container: any) => string[] | void;
+    /**
+     * Post data to client using the res parameter and data DatabaseReponse.
+     */
+    post_data: (req: express.Request, res: express.Response, data: DatabaseResponse, variable_container: any) => void;
+    /**
+     * Callback called if database fetch has failed.
+     */
+    on_error?: (req: express.Request, res: express.Response, error: any, variable_container: any) => void;
 }
