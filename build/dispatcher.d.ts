@@ -107,8 +107,8 @@ export declare class Routes {
 export interface Route {
     /** HTTP method for route */
     method: string;
-    /** Route URL */
-    route: string;
+    /** Route URL. If array, will be set for all given routes */
+    route: string | string[];
     /** Document used into database. If not used, endpoint will be determined by EndpointAccepters */
     endpoint?: string | ((req: express.Request) => string);
     /**

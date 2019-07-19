@@ -308,6 +308,13 @@ export class Routes {
             route
         } = options;
 
+        if (Array.isArray(route)) {
+            for (const r of route) {
+                this.set(Object.assign({}, options, { route: r }));
+            }
+            return;
+        }
+
         // Building function used as express callback
         const express_callback = (req: express.Request, res: express.Response) => {
             const container = {};
@@ -369,8 +376,8 @@ export class Routes {
 export interface Route {
     /** HTTP method for route */
     method: string;
-    /** Route URL */
-    route: string;
+    /** Route URL. If array, will be set for all given routes */
+    route: string | string[];
     /** Document used into database. If not used, endpoint will be determined by EndpointAccepters */
     endpoint?: string | ((req: express.Request) => string);
     /** 

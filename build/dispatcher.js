@@ -252,6 +252,12 @@ class Routes {
      */
     set(options) {
         const { endpoint: force_endpoint, method, get_keys: callback_keys, post_data: callback_data, on_error: callback_error, route } = options;
+        if (Array.isArray(route)) {
+            for (const r of route) {
+                this.set(Object.assign({}, options, { route: r }));
+            }
+            return;
+        }
         // Building function used as express callback
         const express_callback = (req, res) => {
             const container = {};
