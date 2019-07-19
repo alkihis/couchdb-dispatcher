@@ -3,7 +3,7 @@ import express from 'express';
  * Endpoint accepter: Function that accept an ID / Key and produce a true / false value if key should be accepted or not.
  * If Function produce a non-empty string, given string will be used as key (useful for trimming an prefix / suffix)
  */
-export declare type EndpointAccepter = (key: string) => boolean | string;
+export declare type EndpointAccepter = ((key: string) => boolean | string) | RegExp;
 export declare type EndpointAccepters = {
     [endpoint: string]: EndpointAccepter;
 };

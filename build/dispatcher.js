@@ -165,7 +165,7 @@ class Queue {
         this.accept_fn = accept_function;
     }
     push(key, unique_id) {
-        const val = this.accept_fn(key);
+        const val = typeof this.accept_fn === 'function' ? this.accept_fn(key) : this.accept_fn.test(key);
         if (val) {
             if (typeof val === 'string') {
                 // On ajoute la valeur modifiée plutôt que key

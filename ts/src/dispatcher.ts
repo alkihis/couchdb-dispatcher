@@ -4,7 +4,7 @@ import express from 'express';
  * Endpoint accepter: Function that accept an ID / Key and produce a true / false value if key should be accepted or not.
  * If Function produce a non-empty string, given string will be used as key (useful for trimming an prefix / suffix)
  */
-export type EndpointAccepter = (key: string) => boolean | string;
+export type EndpointAccepter = ((key: string) => boolean | string) | RegExp;
 export type EndpointAccepters = { [endpoint: string]: EndpointAccepter };
 export type DatabaseResponse = { [id: string]: {[databaseKeys: string]: any} };
 type Queues = { [endpoint: string]: Queue };
@@ -190,8 +190,8 @@ class Queue {
     }
 
     public push(key: string, unique_id: number) {
-        const val = this.accept_fn(key);
-
+        const val = typeof this.accept_fn === 'function' ? this.accept_fn(key) : this.accept_fn.test(key);
+        
         if (val) {
             if (typeof val === 'string') {
                 // On ajoute la valeur modifiée plutôt que key
